@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VACrashCourse</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎯</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">VA</span>
+    <span class="brand-name">CrashCourse</span>
+  </div>
+
+  <div class="account-switcher">
+    <select id="account-select" title="Switch account"></select>
+    <button id="add-account" class="ghost" title="Add another account">+</button>
+    <button id="remove-account" class="ghost danger" title="Forget this account">&times;</button>
+  </div>
+
+  <div id="rank-pill" class="rank-pill hidden"></div>
+
+  <div class="spacer"></div>
+
+  <label class="queue-filter">
+    <span>Queue</span>
+    <select id="queue-select">
+      <option value="Competitive">Competitive</option>
+      <option value="Unrated">Unrated</option>
+      <option value="">All modes</option>
+    </select>
+  </label>
+
+  <div class="sync-box">
+    <button id="sync-button" class="primary">Sync</button>
+    <button id="deep-sync-button" class="ghost" title="Walk further back through your history">Deep</button>
+    <div id="sync-status" class="sync-status"></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="maps">Maps</button>
+  <button data-tab="agents">Agents</button>
+  <button data-tab="weapons">Weapons</button>
+  <button data-tab="rounds">Rounds</button>
+  <button data-tab="matches">Matches</button>
+  <button data-tab="coach">Coach</button>
+</nav>
+
+<main id="main">
+  <div id="banner" class="banner hidden"></div>
+  <div id="view"></div>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Add an account</h2>
+    <p class="muted">Riot ID, exactly as it appears in game.</p>
+    <input id="modal-input" placeholder="Name#Tag" autocomplete="off">
+    <div id="modal-error" class="modal-error"></div>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="ghost">Cancel</button>
+      <button id="modal-confirm" class="primary">Add</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js?v=1788599225"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
