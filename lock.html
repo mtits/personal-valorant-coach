@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lock a Gemini key · VACrashCourse</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔒</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">VA</span>
+    <span class="brand-name">Lock a key</span>
+  </div>
+  <div class="spacer"></div>
+  <a href="./" class="muted" style="font-size:13px">back to the tracker</a>
+</header>
+
+<main style="max-width:720px">
+  <div class="panel">
+    <h2>Why this page exists</h2>
+    <p class="muted" style="margin-top:0">
+      The published stats page is static and world-readable, so a Gemini key placed
+      in it would be a key given away. This encrypts your key under a passphrase.
+      The published file then holds only ciphertext, and the Coach tab asks for the
+      passphrase before it can talk to Gemini.
+      <br><br>
+      This page is pure client-side cryptography — it works served from anywhere,
+      including this public site. Everything you type stays in this tab; nothing
+      is sent anywhere, and this page holds no key of its own.
+    </p>
+    <p class="muted">
+      <b>Be clear about what this protects.</b> Anyone can download the published
+      file and guess passphrases offline as fast as their hardware allows. The
+      security here <i>is</i> the passphrase. A word from any language is not
+      enough — use a phrase. Nothing you type here leaves this page.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>Lock it</h2>
+    <label class="muted" style="font-size:13px" for="key">Gemini API key</label>
+    <input id="key" type="password" placeholder="AIza…" autocomplete="off"
+           style="width:100%;margin:6px 0 14px">
+
+    <label class="muted" style="font-size:13px" for="pass">Passphrase (12+ characters)</label>
+    <input id="pass" type="password" placeholder="a phrase you will remember"
+           autocomplete="off" style="width:100%;margin:6px 0 4px">
+    <div id="strength" class="muted" style="font-size:12px;min-height:18px"></div>
+
+    <label class="muted" style="font-size:13px" for="pass2">Passphrase again</label>
+    <input id="pass2" type="password" autocomplete="off" style="width:100%;margin:6px 0 14px">
+
+    <button id="go" class="primary">Lock the key</button>
+    <div id="error" class="modal-error"></div>
+  </div>
+
+  <div class="panel hidden" id="result-panel">
+    <h2>Your locked key</h2>
+    <p class="muted" style="margin-top:0">
+      Copy this and set it as a repository <b>variable</b> named
+      <code>COACH_KEY_BLOB</code> in the private repo
+      (Settings → Secrets and variables → Actions → Variables). A variable, not a
+      secret: it is ciphertext, and the workflow needs to put it in the page.
+    </p>
+    <textarea id="result" readonly rows="5"
+              style="width:100%;font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--text)"></textarea>
+    <div style="display:flex;gap:9px;margin-top:10px">
+      <button id="copy" class="primary">Copy</button>
+      <button id="verify" class="ghost">Verify it unlocks</button>
+    </div>
+    <div id="verify-result" class="muted" style="font-size:13px;margin-top:9px"></div>
+  </div>
+</main>
+
+<script type="module">
+import { lock, unlock, MIN_PASSPHRASE, ITERATIONS } from './keylock.js';
+
+const $ = (id) => document.getElementById(id);
+
+$('pass').addEventListener('input', () => {
+  const value = $('pass').value;
+  if (!value) { $('strength').textContent = ''; return; }
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter((r) => r.test(value)).length;
+  if (value.length < MIN_PASSPHRASE) {
+    $('strength').textContent = `${value.length}/${MIN_PASSPHRASE} characters — too short to survive offline guessing.`;
+    $('strength').style.color = 'var(--bad)';
+  } else if (value.length < 20 && classes < 3) {
+    $('strength').textContent = 'Long enough, but a longer phrase would be much harder to guess.';
+    $('strength').style.color = 'var(--warn)';
+  } else {
+    $('strength').textContent = 'Good.';
+    $('strength').style.color = 'var(--good)';
+  }
+});
+
+$('go').addEventListener('click', async () => {
+  $('error').textContent = '';
+  $('verify-result').textContent = '';
+  const key = $('key').value.trim();
+  const pass = $('pass').value;
+  if (pass !== $('pass2').value) {
+    $('error').textContent = 'The two passphrases do not match.';
+    return;
+  }
+  $('go').disabled = true;
+  $('go').textContent = `Deriving (${ITERATIONS.toLocaleString()} rounds)…`;
+  try {
+    const blob = await lock(key, pass);
+    $('result').value = blob;
+    $('result-panel').classList.remove('hidden');
+    $('result-panel').scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    $('error').textContent = err.message;
+  } finally {
+    $('go').disabled = false;
+    $('go').textContent = 'Lock the key';
+  }
+});
+
+$('copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('result').value);
+    $('copy').textContent = 'Copied';
+    setTimeout(() => { $('copy').textContent = 'Copy'; }, 1500);
+  } catch (err) {
+    $('result').select();
+  }
+});
+
+// Proves the round trip before you paste it anywhere.
+$('verify').addEventListener('click', async () => {
+  $('verify-result').textContent = 'checking…';
+  try {
+    const back = await unlock($('result').value, $('pass').value);
+    const ok = back === $('key').value.trim();
+    $('verify-result').textContent = ok
+      ? 'Unlocks correctly with that passphrase.'
+      : 'Unlocked, but the result does not match the key you typed.';
+    $('verify-result').style.color = ok ? 'var(--good)' : 'var(--bad)';
+  } catch (err) {
+    $('verify-result').textContent = err.message;
+    $('verify-result').style.color = 'var(--bad)';
+  }
+});
+</script>
+</body>
+</html>
